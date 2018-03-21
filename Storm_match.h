@@ -25,19 +25,22 @@ namespace storm
 			int PicNumth;
 			int cloudID;
 			Point Position;
+
+			void secureUnit(string PicNum, Features cloud);
 		};
 
 		Track();
-		Track(string FileName, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth);
+		Track(string FileName, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, WORD Search_Radius);
 		~Track();
 
 	public:
-		void track(string FileName);
-		bool track_operator();
+
 	protected:
 		bool loadImageFromGivenFileName(string FileName, DWORD &dwHeight, DWORD &dwWidth, WORD &flag, BYTE* &pBitmap);
-		bool IdentifyAndMatch(BYTE** pOut, WORD ImgNumber, DWORD dwHeight, DWORD dwWidth, int Search_Radius, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth);
-		bool CloudDetect(BYTE* Bitmap, DWORD &dwHeight, DWORD &dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double *> &cloudX_vector, vector<double *> &cloudY_vector, vector<int> &cloudPointCount, vector<int> belong, int &cloudCount, vector<Features> &cloud);
+		string GetFileNum(string FileName);
+		bool WritePicCloudToTxtFile(string FileName, vector<double *> & cloudX_vector, vector<double *> & cloudY_vector, vector<int> & cloudPointCount, int & cloudCount, vector<Features> & cloud);
+		bool ReadPicCloudFromTxtFile(string FileName, vector<double *> & cloudX_vector, vector<double *> & cloudY_vector, vector<int> & cloudPointCount, int & cloudCount, vector<Features> & cloud);
+		bool CloudDetect(BYTE* Bitmap, DWORD &dwHeight, DWORD &dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double *> &cloudX_vector, vector<double *> &cloudY_vector, vector<int> &cloudPointCount, /*vector<int> belong, */int &cloudCount, vector<Features> &cloud);
 	private:
 		list<queue<TrackUnit> > trackLineVector;
 		int TrackCount;
@@ -55,6 +58,7 @@ namespace storm
 		WORD m_HighThre;
 		WORD m_MergeThre;
 		WORD m_RSmooth;
+		WORD m_Search_Radius;
 	};
 
 }
