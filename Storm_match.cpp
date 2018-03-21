@@ -3,8 +3,73 @@
 
 namespace storm
 {
+	Track::Track()
+	{
+		isStart = false;
+		isHaveFileName = false;
 
-	bool CloudDetect(BYTE * Bitmap, DWORD & dwHeight, DWORD& dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double*>& cloudX_vector, vector<double*>& cloudY_vector, vector<int>& cloudPointCount, vector<int> belong, int & cloudCount, vector<Features> & cloud)
+		m_dwHeight = 0;
+		m_dwWidth = 0;
+		m_flag = 0;
+		m_pBitmap = NULL;
+
+		int TrackCount = 0;
+
+		m_LowThre = 0;
+		m_HighThre = 0;
+		m_MergeThre = 0;
+		m_RSmooth = 0;
+	}
+
+	Track::Track(string FileName, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth)
+	{
+		isStart = false;
+		isHaveFileName = true;
+
+		loadImageFromGivenFileName(FileName, m_dwHeight, m_dwWidth, m_flag, m_pBitmap);
+
+		m_LowThre = LowThre; m_HighThre = HighThre; m_MergeThre = MergeThre; m_RSmooth = RSmooth;
+
+		vector<double *> cloudX_vector;
+		vector<double *> cloudY_vector;
+		vector<int> cloudPointCount;
+		vector<int> belong;
+		int cloudCount;
+		CloudDetect(m_pBitmap, m_dwHeight, m_dwWidth, m_LowThre, m_HighThre, m_MergeThre, m_RSmooth, cloudX_vector, cloudY_vector, cloudPointCount, belong, cloudCount, prePicCloud);
+
+
+
+		for (int i = 0; i < prePicCloud.size(); i++)
+		{
+
+		}
+	}
+
+	Track::~Track()
+	{
+		delete[] m_pBitmap; m_pBitmap = NULL;
+	}
+
+	bool Track::loadImageFromGivenFileName(string FileName, DWORD & dwHeight, DWORD & dwWidth, WORD & flag, BYTE *& pBitmap)
+	{
+		if (FileName.empty()) return false;
+
+		if (pBitmap != NULL) delete[] pBitmap;
+
+		BYTE* pTmp = NULL;
+		LoadVectorFromBMPFile(FileName, pTmp, dwHeight, dwWidth, flag);
+		
+		int dwSize;
+		dwSize = dwHeight * dwWidth;
+		pBitmap = new BYTE[dwSize];
+		for (int i = 0; i < dwSize; i++)
+			pBitmap[i] = pTmp[i];
+		
+		delete[] pTmp;
+		return true;
+	}
+
+	bool Track::CloudDetect(BYTE * Bitmap, DWORD & dwHeight, DWORD & dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double*>& cloudX_vector, vector<double*>& cloudY_vector, vector<int>& cloudPointCount, vector<int> belong, int & cloudCount, vector<Features>& cloud)
 	{
 		double** ppdX = NULL;
 		double** ppdY = NULL;
@@ -20,60 +85,10 @@ namespace storm
 			belong.push_back(pnBelong[i]);
 		}
 
-		delete [] ppdX;
-		delete [] ppdY;
-		delete [] pnPtsCnt;
-		delete [] pnBelong;
-		return true;
-	}
-
-	Track::Track()
-	{
-		isStart = false;
-		isHaveFileName = false;
-		m_dwHeight = 0;
-		m_dwWidth = 0;
-		m_flag = 0;
-		m_pBitmap = NULL;
-	}
-
-	Track::Track(string FileName)
-	{
-		isStart = false;
-		isHaveFileName = true;
-
-		loadImageFromGivenFileName(FileName, m_dwHeight, m_dwWidth, m_flag, m_pBitmap);
-
-
-	}
-
-	Track::~Track()
-	{
-		delete[] m_pBitmap; m_pBitmap = NULL;
-	}
-
-	bool Track::loadImageFromGivenFileName(string FileName, int & dwHeight, int & dwWidth, int & flag, BYTE *& pBitmap)
-	{
-		if (FileName.empty()) return false;
-
-		if (pBitmap != NULL) delete[] pBitmap;
-
-		BYTE* pTmp = NULL;
-		DWORD height_tmp, width_tmp;
-		WORD flag_tmp;
-		LoadVectorFromBMPFile(FileName, pTmp, height_tmp, width_tmp, flag_tmp);
-
-		dwHeight = height_tmp;
-		dwWidth = width_tmp;
-		flag = flag_tmp;
-		
-		int dwSize;
-		dwSize = dwHeight * dwWidth;
-		pBitmap = new BYTE[dwSize];
-		for (int i = 0; i < dwSize; i++)
-			pBitmap[i] = pTmp[i];
-		
-		delete[] pTmp;
+		delete[] ppdX;
+		delete[] ppdY;
+		delete[] pnPtsCnt;
+		delete[] pnBelong;
 		return true;
 	}
 }
