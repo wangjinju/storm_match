@@ -29,20 +29,22 @@ namespace storm
 			void secureUnit(string PicNum, Features cloud);
 		};
 
+	public:
 		Track();
 		Track(string FileName, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, WORD Search_Radius);
 		~Track();
 
-	public:
-
 	protected:
-		bool loadImageFromGivenFileName(string FileName, DWORD &dwHeight, DWORD &dwWidth, WORD &flag, BYTE* &pBitmap);
 		string GetFileNum(string FileName);
-		bool WritePicCloudToTxtFile(string FileName, vector<double *> & cloudX_vector, vector<double *> & cloudY_vector, vector<int> & cloudPointCount, int & cloudCount, vector<Features> & cloud);
-		bool ReadPicCloudFromTxtFile(string FileName, vector<double *> & cloudX_vector, vector<double *> & cloudY_vector, vector<int> & cloudPointCount, int & cloudCount, vector<Features> & cloud);
-		bool CloudDetect(BYTE* Bitmap, DWORD &dwHeight, DWORD &dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double *> &cloudX_vector, vector<double *> &cloudY_vector, vector<int> &cloudPointCount, /*vector<int> belong, */int &cloudCount, vector<Features> &cloud);
-	private:
-		list<queue<TrackUnit> > trackLineVector;
+		bool loadImageFromGivenFileName(string FileName, DWORD &dwHeight, DWORD &dwWidth, WORD &flag, BYTE* &pBitmap);
+		bool WritePicCloudToTxtFile(string FileName, vector<double *>& cloudX_vector, vector<double *>& cloudY_vector,
+			vector<int>& cloudPointCount, int& cloudCount, vector<Features>& cloud);
+		bool ReadPicCloudFromTxtFile(string FileNum, vector<double *>& cloudX_vector, vector<double *>& cloudY_vector,
+			vector<int>& cloudPointCount, int& cloudCount, vector<Features>& cloud);
+		bool CloudDetect(BYTE* Bitmap, DWORD &dwHeight, DWORD &dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double *> &cloudX_vector, vector<double *> &cloudY_vector, vector<int> &cloudPointCount, /*vector<int>& belong,*/ int &cloudCount, vector<Features> &cloud);
+
+	public:
+		list<queue<TrackUnit>> trackLinevector;
 		int TrackCount;
 
 		vector<Features> prePicCloud;
@@ -51,14 +53,13 @@ namespace storm
 		DWORD m_dwWidth;
 		WORD m_flag;
 
-		bool isStart;
-		bool isHaveFileName;
-		
 		WORD m_LowThre;
 		WORD m_HighThre;
 		WORD m_MergeThre;
 		WORD m_RSmooth;
 		WORD m_Search_Radius;
-	};
 
+		bool isStart;
+		bool isHaveFileName;
+	};
 }
