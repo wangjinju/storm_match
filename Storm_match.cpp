@@ -329,8 +329,6 @@ namespace storm
 
 			//可能添加没有出现风暴的情况
 		}
-		
-		DWORD dwSize = m_dwHeight * m_dwWidth;
 
 		vector<Features> currentPicRelationCloud;
 		correlation(NextBitmap, NextPicCloud, currentPicRelationCloud);
@@ -340,8 +338,8 @@ namespace storm
 		vector<int> currentPicRelationCloudPointCount;
 		CalcRelationCloudEdge(NextPicCloud, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, currentPicRelationCloud, currentPicRelationCloudX_vector, currentPicRelationCloudY_vector, currentPicRelationCloudPointCount);
 
-		vector<vector<int> > RelationCloudRectIntersectVector;
-		GetCloudRectIntersectVector(currentPicRelationCloud, RelationCloudRectIntersectVector);
+		vector<vector<int> > RelationCloudIntersectVector;
+		GetCloudIntersectVector(currentPicRelationCloudX_vector, currentPicRelationCloudY_vector, currentPicRelationCloudPointCount, currentPicRelationCloud, RelationCloudIntersectVector);
 
 
 
@@ -394,7 +392,7 @@ namespace storm
 		return true;
 	}
 
-	bool Track::GetCloudRectIntersectVector(vector<Features>& currentPicRelationCloud, vector<vector<int> > &IntersectVector)
+	bool Track::GetCloudIntersectVector(vector<double *> & currentPicRelationCloudX_vector, vector<double *> & currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCloud, vector<Features>& currentPicRelationCloud, vector<vector<int> > &IntersectVector)
 	{
 		if (currentPicRelationCloud.empty()) return false;
 
@@ -403,7 +401,7 @@ namespace storm
 		for (int i = 0; i < RelationSize; i++)
 		{
 			vector<int> matchVec;
-			matchVec.push_back(i);
+			/*matchVec.push_back(i);*/
 
 			double Match_RectangleTempX = (currentPicRelationCloud[i].right + currentPicRelationCloud[i].left) / 2.0;
 			double Match_XLength = currentPicRelationCloud[i].right - currentPicRelationCloud[i].left;
@@ -423,7 +421,7 @@ namespace storm
 
 				if (X_Cross && Y_Cross)
 				{
-					matchVec.push_back(j);
+					CheckCloudEdgeIntersect(i, j, currentPicRelationCloudX_vector, currentPicRelationCloudY_vector, currentPicRelationCloudPointCloud, currentPicRelationCloud) ? matchVec.push_back(j) : 0;
 				}
 			}
 			IntersectVector.push_back(matchVec);
@@ -431,45 +429,28 @@ namespace storm
 		return true;
 	}
 
-	bool Track::CalcRelationCloudEdgeIntersectVector(vector<vector<int>>& IntersectVector)
+	bool Track::CheckCloudEdgeIntersect(int currentPicRelationCloudNum, int currentPicCloudNum, vector<double*>& currentPicRelationCloudX_vector, vector<double*>& currentPicRelationCloudY_vector, vector<int>& currentPicRelationCloudPointCloud, vector<Features>& currentPicRelationCloud)
 	{
-		if (IntersectVector.size() == 0) return false;
+		if (currentPicRelationCloud.empty())return false;
 
-		int matchNum = IntersectVector.size(); //匹配框的数量 22
-		vector<vector<int>> match_his;
+		int currentPicRelationCloudPoint = currentPicRelationCloudPointCloud[currentPicRelationCloudNum];
+		double * currentPicRelationCloudX = currentPicRelationCloudX_vector[currentPicRelationCloudNum];
+		double * currentPicRelationCloudY = currentPicRelationCloudY_vector[currentPicRelationCloudNum];
+		double * currentPicCloudX = currentPicCloudX_vector[currentPicCloudNum];
+		double * currentPicCloudY = currentPicCloudY_vector[currentPicCloudNum];
 
-		for (int i = 0; i < matchNum; i++)
+		int InsidePointNum = 0;
+		for (int i = 0; i < currentPicRelationCloudPoint; i++)
 		{
-			int hisNum = IntersectVector[i].size() - 1; //第 i 个Match中匹配到的 His 个数； 0表示当面Match没有匹配到历史云团
+			double XTmp = currentPicRelationCloudX[i];
+			double YTmp = currentPicRelationCloudY[i];
 
-			for (int j = 0; j < hisNum; j++)
-			{
-				vector<int> match_hisVec;
-
-				Features IntersectCloud = currentPicCloud[IntersectVector[i][j + 1]];
-				int IntersectCloudPointCount = currentPicCloudPointCount[IntersectVector[i][j + 1]];
-	
-				//算法部分
-				for (int k = 0; k < pointNumMatch; k++)
-				{
-					double matchPointX = ppdX_Match[i][k];
-					double matchPointY = ppdY_Match[i][k];
-					int pointNum = pnPtsCnt_His[index_his] - 2;		//match云团边界点个数
-																	//判断在里面的点数至少存在 insidePointNum 个
-					InsideMargin(pointNum, ppdX_His[index_his], ppdY_His[index_his], matchPointX, matchPointY) ? insidePointNum++ : 0;
-				}
-
-				//如果是边界相交或者包含关系 就保存 Match_Rectangle 序号索引 和His_Rectangle 序号索引 是一对前后关系
-				if (insidePointNum >= 2)
-				{
-					match_hisVec.push_back(i);
-					match_hisVec.push_back(match_his_queue[i][j + 1]);
-					match_his.push_back(match_hisVec);
-				}
-				match_hisVec.clear();
-			}
+			int cloudPoint = currentPicCloudPointCount[currentPicCloudNum] - 2;
+			InsideMargin(cloudPoint, currentPicCloudX, currentPicCloudY, XTmp, YTmp) ? InsidePointNum++ : 0;
 		}
-		return match_his;
+
+		if (InsidePointNum >= 2)
+			return true;
 	}
 	
 }
