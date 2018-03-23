@@ -46,8 +46,8 @@ namespace storm
 		bool GetMatchMap(BYTE * Bitmap, vector<double*> & NextPicCloudX_vector, vector<double*> & NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, int & NextPicCloudCount, vector<Features> & NextPicCloud);
 		bool correlation(BYTE* Bitmap, vector<Features> & NextPicCloud, vector<Features> & currentPicRelationCloud);
 		bool CalcRelationCloudEdge(vector<Features> &NextPicCloud, vector<double *> &NextPicCloudX_vector, vector<double *> &NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, vector<Features> &currentPicRelationCloud, vector<double *> &currentPicRelationCloudX_vector, vector<double *> &currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCount);
-		bool GetCloudRectIntersectVector(vector<Features> & currentPicRelationCloud, vector<vector<int> > &IntersectVector);
-		bool CalcRelationCloudEdgeIntersectVector(vector<vector<int> > & IntersectVector);
+		bool GetCloudIntersectVector(vector<double *> & currentPicRelationCloudX_vector, vector<double *> & currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCloud, vector<Features> & currentPicRelationCloud, vector<vector<int> > &IntersectVector);
+		bool CheckCloudEdgeIntersect(int currentPicRelationCloudNum, int currentPicCloudNum, vector<double *> & currentPicRelationCloudX_vector, vector<double *> & currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCloud, vector<Features> & currentPicRelationCloud);
 	private:
 		list<queue<TrackUnit> > trackLineVector;
 		list<int> trackLineOrder;
