@@ -42,17 +42,23 @@ namespace storm
 		bool ReadPicCloudFromTxtFile(string FileNum, vector<double *>& cloudX_vector, vector<double *>& cloudY_vector, vector<int>& cloudPointCount, int& cloudCount, vector<Features>& cloud);
 		bool CloudDetect(BYTE* Bitmap, DWORD &dwHeight, DWORD &dwWidth, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, vector<double *> &cloudX_vector, vector<double *> &cloudY_vector, vector<int> &cloudPointCount, /*vector<int> belong, */int &cloudCount, vector<Features> &cloud);
 
-		bool GetNextPicFeatures(BYTE* &Bitmap, DWORD & dwHeight, DWORD & dwWidth, WORD & flag, vector<double *> & NextPicCloudX_vector, vector<double *> & NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, /*vector<int> & belong, */int & NextPicCloudCount, vector<Features> & NextPicCloud);
+		bool GetNextPicFeatures(string & FileName, string & PicNum, BYTE* &Bitmap, DWORD & dwHeight, DWORD & dwWidth, WORD & flag, vector<double *> & NextPicCloudX_vector, vector<double *> & NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, /*vector<int> & belong, */int & NextPicCloudCount, vector<Features> & NextPicCloud);
 		bool GetMatchMap(BYTE * Bitmap, vector<double*> & NextPicCloudX_vector, vector<double*> & NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, int & NextPicCloudCount, vector<Features> & NextPicCloud);
 		bool correlation(BYTE* Bitmap, vector<Features> & NextPicCloud, vector<Features> & currentPicRelationCloud);
 		bool CalcRelationCloudEdge(vector<Features> &NextPicCloud, vector<double *> &NextPicCloudX_vector, vector<double *> &NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, vector<Features> &currentPicRelationCloud, vector<double *> &currentPicRelationCloudX_vector, vector<double *> &currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCount);
 		bool GetCloudIntersectVector(vector<double *> & currentPicRelationCloudX_vector, vector<double *> & currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCloud, vector<Features> & currentPicRelationCloud, vector<vector<int> > &IntersectVector);
 		bool CheckCloudEdgeIntersect(int currentPicRelationCloudNum, int currentPicCloudNum, vector<double *> & currentPicRelationCloudX_vector, vector<double *> & currentPicRelationCloudY_vector, vector<int> & currentPicRelationCloudPointCloud, vector<Features> & currentPicRelationCloud);
-	private:
-		list<queue<TrackUnit> > trackLineVector;
-		list<int> trackLineOrder;
 
-		vector<int> matchMap;
+		bool AnalyseMatchMap(string & FileName, string & PicNum, vector<Features> &NextPicCloud);
+		bool WriteTrackLineToTxtFile(int lineOrder, vector<TrackUnit> & trackLine, vector<int> & mergeLineOrder, vector<int> & splitLineOrder = vector<int>());
+		bool ReadTrackLineFromTxtFile(int & lineOrder, vector<TrackUnit> & trackLine, vector<int> & mergeLineOrder, vector<int> & splitLineOder);
+	private:
+		list<vector<TrackUnit> > trackLineVector;
+		list<vector<int> > lineMergeOrder;
+		list<int> trackLineOrder;
+		int trackLineCount;
+
+		vector<vector<int> > matchMap;
 		vector<Features> currentPicCloud; //现阶段没有考虑出现环状的云团
 		vector<double *> currentPicCloudX_vector;
 		vector<double *> currentPicCloudY_vector;
@@ -67,6 +73,7 @@ namespace storm
 		bool isHaveFileName;
 
 		string track_current_filename;
+		string current_PicNum;
 		int step;
 		
 		WORD m_LowThre;

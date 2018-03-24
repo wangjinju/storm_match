@@ -15,6 +15,7 @@ namespace storm
 		isStart = false;
 		isHaveFileName = false;
 		track_current_filename = string();
+		current_PicNum = string();
 		step = 0;
 
 		m_dwHeight = 0;
@@ -34,8 +35,11 @@ namespace storm
 		currentPicCloudPointCount.clear();
 		currentPicCloudCount = 0;
 		matchMap.clear();
+
 		trackLineVector.clear();
+		lineMergeOrder.clear();
 		trackLineOrder.clear();
+		trackLineCount = 0;
 	}
 
 	Track::Track(string FileName, WORD LowThre, WORD HighThre, WORD MergeThre, WORD RSmooth, WORD Search_Radius)
@@ -52,25 +56,33 @@ namespace storm
 		/*vector<int> belong;*/
 		CloudDetect(m_pBitmap, m_dwHeight, m_dwWidth, m_LowThre, m_HighThre, m_MergeThre, m_RSmooth, currentPicCloudX_vector, currentPicCloudY_vector, currentPicCloudPointCount, currentPicCloudCount, currentPicCloud);
 
-		string PicNum = GetFileNum(FileName);
-		WritePicCloudToTxtFile(PicNum, currentPicCloudX_vector, currentPicCloudY_vector, currentPicCloudPointCount, currentPicCloudCount, currentPicCloud);
+		current_PicNum = GetFileNum(FileName);
+		WritePicCloudToTxtFile(current_PicNum, currentPicCloudX_vector, currentPicCloudY_vector, currentPicCloudPointCount, currentPicCloudCount, currentPicCloud);
 
 		for (int i = 0; i < currentPicCloudCount; i++)
 		{
 			TrackUnit unit;
-			queue<TrackUnit> tmp;
-			unit.secureUnit(PicNum, currentPicCloud[i]);
-			tmp.push(unit);
+			vector<TrackUnit> tmp;
+			unit.secureUnit(current_PicNum, currentPicCloud[i]);
+			tmp.push_back(unit);
 			trackLineVector.push_back(tmp);
+			lineMergeOrder.push_back(vector<int>());
 			trackLineOrder.push_back(i);
-
-			matchMap.push_back(0);
 		}
+		trackLineCount = currentPicCloudCount;
+
+		matchMap.clear();
 	}
 
 	Track::~Track()
 	{
 		delete[] m_pBitmap; m_pBitmap = NULL;
+
+		for (int i = 0; i < currentPicCloudCount; i++)
+		{
+			delete[] currentPicCloudX_vector[i];
+			delete[] currentPicCloudY_vector[i];
+		}
 	}
 
 	bool Track::Track_start()
@@ -85,8 +97,10 @@ namespace storm
 		vector<int> NextPicCloudPointCount;
 		int NextPicCloudCount;
 		vector<Features> NextPicCloud;
+		string FileName;
+		string PicNum;
 
-		GetNextPicFeatures(NextBitmap, NextdwHeight, NextdwWidth, Nextflag, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, NextPicCloudCount, NextPicCloud);
+		GetNextPicFeatures(FileName, PicNum, NextBitmap, NextdwHeight, NextdwWidth, Nextflag, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, NextPicCloudCount, NextPicCloud);
 
 		GetMatchMap(NextBitmap, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, NextPicCloudCount, NextPicCloud);
 
@@ -293,23 +307,21 @@ namespace storm
 		return true;
 	}
 
-	bool Track::GetNextPicFeatures(BYTE *& NextBitmap, DWORD & NextdwHeight, DWORD & NextdwWidth, WORD & Nextflag, vector<double *> & NextPicCloudX_vector, vector<double *> & NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, /*vector<int> & belong, */int & NextPicCloudCount, vector<Features> & NextPicCloud)
+	bool Track::GetNextPicFeatures(string & FileName, string & PicNum, BYTE *& NextBitmap, DWORD & NextdwHeight, DWORD & NextdwWidth, WORD & Nextflag, vector<double *> & NextPicCloudX_vector, vector<double *> & NextPicCloudY_vector, vector<int> & NextPicCloudPointCount, /*vector<int> & belong, */int & NextPicCloudCount, vector<Features> & NextPicCloud)
 	{
 		if (NextBitmap)
 		{
 			delete[] NextBitmap; NextBitmap = NULL;
 		}
-		string FileName = track_current_filename;
+		FileName = track_current_filename;
 		if (FindNextFileName(FileName, step)) return false;
 
 		if (loadImageFromGivenFileName(FileName, NextdwHeight, NextdwWidth, Nextflag, NextBitmap)) return false;
 
 		CloudDetect(NextBitmap, NextdwHeight, NextdwWidth, m_LowThre, m_HighThre, m_MergeThre, m_RSmooth, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, NextPicCloudCount, NextPicCloud);
 		
-		string PicNum = GetFileNum(FileName);
+		PicNum = GetFileNum(FileName);
 		WritePicCloudToTxtFile(PicNum, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, NextPicCloudCount, NextPicCloud);
-
-		track_current_filename = FileName;
 
 		return true;
 	}
@@ -338,10 +350,7 @@ namespace storm
 		vector<int> currentPicRelationCloudPointCount;
 		CalcRelationCloudEdge(NextPicCloud, NextPicCloudX_vector, NextPicCloudY_vector, NextPicCloudPointCount, currentPicRelationCloud, currentPicRelationCloudX_vector, currentPicRelationCloudY_vector, currentPicRelationCloudPointCount);
 
-		vector<vector<int> > RelationCloudIntersectVector;
-		GetCloudIntersectVector(currentPicRelationCloudX_vector, currentPicRelationCloudY_vector, currentPicRelationCloudPointCount, currentPicRelationCloud, RelationCloudIntersectVector);
-
-
+		GetCloudIntersectVector(currentPicRelationCloudX_vector, currentPicRelationCloudY_vector, currentPicRelationCloudPointCount, currentPicRelationCloud, matchMap);
 
 		return true;
 	}
@@ -451,6 +460,232 @@ namespace storm
 
 		if (InsidePointNum >= 2)
 			return true;
+	}
+
+	bool Track::AnalyseMatchMap(string & FileName, string & PicNum, vector<Features> &NextPicCloud)
+	{
+		if (matchMap.empty()) return false;
+
+		vector<vector<int> > matchMapRe(currentPicCloudCount, vector<int>());
+		for (int i = 0; i < matchMap.size(); i++)
+		{
+			if (matchMap[i].empty()) continue;
+			for (int j = 0; j < matchMap[i].size(); j++)
+			{
+				matchMapRe[matchMap[i][j]].push_back(i);
+			}
+		}
+
+		for (int i = 0; i < matchMap.size(); i++)
+		{
+			if (matchMap[i].empty())
+			{
+				TrackUnit unit;
+				vector<TrackUnit> trackLineTmp;
+				unit.secureUnit(PicNum, NextPicCloud[i]);
+				trackLineTmp.push_back(unit);
+				trackLineVector.push_back(trackLineTmp);
+				trackLineCount++;
+				trackLineOrder.push_back(trackLineCount);
+				lineMergeOrder.push_back(vector<int>());
+			}
+
+			if (matchMap[i].size() == 1)
+			{
+				if (matchMapRe[matchMap[i][0]].size() == 1 && matchMapRe[matchMap[i][0]][0] == i)
+				{
+					int fatherNum = matchMap[i][0];
+					int fatherID = currentPicCloud[fatherNum].ID;
+
+					for each (vector<TrackUnit> var in trackLineVector)
+					{
+						if (var.back().cloudID == fatherID)
+						{
+							TrackUnit unit;
+							unit.secureUnit(PicNum, NextPicCloud[i]);
+							var.push_back(unit);
+							break;
+						}
+					}
+				}
+			}
+
+			if (matchMap[i].size() > 1)
+			{
+				vector<int> mergeOrder;
+
+				for (int j = 0; j < matchMap[i].size(); j++)
+				{
+					if (matchMapRe[matchMap[i][j]].size() > 1)
+					{
+						int fatherNum = matchMap[i][j];
+						int fatherID = currentPicCloud[fatherNum].ID;
+
+						list<int>::iterator order = trackLineOrder.begin();
+						list<vector<int> >::iterator itlineMergeOrder = lineMergeOrder.begin();
+						list<vector<TrackUnit> >::iterator it = trackLineVector.begin();
+						for (; it != trackLineVector.end();)
+						{
+							if ((*it).back().cloudID == fatherID)
+							{
+								mergeOrder.push_back(*order);
+								break;
+
+							}
+							else
+							{
+								it++;
+								order++;
+								itlineMergeOrder++;
+							}
+						}
+					}
+					else if (matchMapRe[matchMap[i][j]].size() == 1)
+					{
+						int fatherNum = matchMap[i][j];
+						int fatherID = currentPicCloud[fatherNum].ID;
+
+						list<int>::iterator order = trackLineOrder.begin();
+						list<vector<int> >::iterator itlineMergeOrder = lineMergeOrder.begin();
+						list<vector<TrackUnit> >::iterator it = trackLineVector.begin();
+						for (; it != trackLineVector.end();)
+						{
+							if ((*it).back().cloudID == fatherID)
+							{
+								WriteTrackLineToTxtFile(*order, *it, *itlineMergeOrder);
+								mergeOrder.push_back(*order);
+
+								it = trackLineVector.erase(it);
+								order = trackLineOrder.erase(order);
+								itlineMergeOrder = lineMergeOrder.erase(itlineMergeOrder);
+
+								break;
+
+							}
+							else
+							{
+								it++;
+								order++;
+								itlineMergeOrder++;
+							}
+						}
+					}
+				}
+
+				TrackUnit unit;
+				vector<TrackUnit> trackLineTmp;
+				unit.secureUnit(PicNum, NextPicCloud[i]);
+				trackLineTmp.push_back(unit);
+				trackLineVector.push_back(trackLineTmp);
+				trackLineCount++;
+				trackLineOrder.push_back(trackLineCount);
+				lineMergeOrder.push_back(mergeOrder);
+			}	
+		}
+
+		for (int i = 0; i < matchMapRe.size(); i++)
+		{
+			if (matchMapRe[i].size() == 0)
+			{
+				int cloudID = currentPicCloud[i].ID;
+
+				list<int>::iterator order = trackLineOrder.begin();
+				list<vector<int> >::iterator itlineMergeOrder = lineMergeOrder.begin();
+				list<vector<TrackUnit> >::iterator it = trackLineVector.begin();
+				for (; it != trackLineVector.end();)
+				{
+					if ((*it).back().cloudID == cloudID)
+					{
+						WriteTrackLineToTxtFile(*order, *it, *itlineMergeOrder);
+
+						it = trackLineVector.erase(it);
+						order = trackLineOrder.erase(order);
+						itlineMergeOrder = lineMergeOrder.erase(itlineMergeOrder);
+
+						break;
+
+					}
+					else
+					{
+						it++;
+						order++;
+						itlineMergeOrder++;
+					}
+				}
+			}
+
+			if (matchMapRe[i].size() > 1)
+			{
+				vector<int> splitOrder;
+
+				for (int j = 0; j < matchMapRe[i].size(); j++)
+				{
+					if (matchMap[matchMapRe[i][j]].size() > 1)
+					{
+						int SonNum = matchMapRe[i][j];
+						int cloudID = NextPicCloud[SonNum].ID;
+
+						list<int>::iterator order = trackLineOrder.begin();
+						list<vector<int> >::iterator itlineMergeOrder = lineMergeOrder.begin();
+						list<vector<TrackUnit> >::iterator it = trackLineVector.begin();
+						for (; it != trackLineVector.end();)
+						{
+							if ((*it).back().cloudID == cloudID)
+							{
+								splitOrder.push_back(*order);
+								break;
+
+							}
+							else
+							{
+								it++;
+								order++;
+								itlineMergeOrder++;
+							}
+						}
+					}
+					else if (matchMap[matchMapRe[i][j]].size() == 1 && matchMap[matchMapRe[i][j]][0] == 1)
+					{
+						int SonNum = matchMapRe[i][j];
+						TrackUnit unit;
+						unit.secureUnit(PicNum, NextPicCloud[SonNum]);
+						vector<TrackUnit> trackLineTmp;
+						trackLineTmp.push_back(unit);
+						trackLineVector.push_back(trackLineTmp);
+						trackLineCount++;
+						trackLineOrder.push_back(trackLineCount);
+						lineMergeOrder.push_back(vector<int>());
+
+						splitOrder.push_back(trackLineCount);
+					}
+				}
+
+				int cloudID = currentPicCloud[i].ID;
+
+				list<int>::iterator order = trackLineOrder.begin();
+				list<vector<int> >::iterator itlineMergeOrder = lineMergeOrder.begin();
+				list<vector<TrackUnit> >::iterator it = trackLineVector.begin();
+				for (; it != trackLineVector.end();)
+				{
+					if ((*it).back().cloudID == cloudID)
+					{
+						WriteTrackLineToTxtFile(*order, *it, *itlineMergeOrder, splitOrder);
+
+						it = trackLineVector.erase(it);
+						order = trackLineOrder.erase(order);
+						itlineMergeOrder = lineMergeOrder.erase(itlineMergeOrder);
+						break;
+
+					}
+					else
+					{
+						it++;
+						order++;
+						itlineMergeOrder++;
+					}
+				}
+			}
+		}
 	}
 	
 }
